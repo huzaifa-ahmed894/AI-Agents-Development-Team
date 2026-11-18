@@ -19,7 +19,7 @@ def chat(query, session_id):
     return result["messages"][-1].content
 
 
-WORKERS = ("menu_agent", "complaint_agent", "customer_support_agent", "offer_agent")
+WORKERS = ("menu_agent", "complaint_agent")
 
 
 def is_answer(m):
@@ -28,7 +28,7 @@ def is_answer(m):
             and not m.content.startswith("Transferring back"))
 
 
-def get_history(session_id):
+def get_history(session_id = None):
     # Only show user questions and final AI answers, not tool steps
     shown = []
     for m in sqlite.load_messages(session_id):
@@ -38,3 +38,5 @@ def get_history(session_id):
         if item != (shown[-1] if shown else None):   # supervisor repeats the worker's answer
             shown.append(item)
     return shown
+
+
