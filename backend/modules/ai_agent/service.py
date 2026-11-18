@@ -8,7 +8,12 @@ graph = build_supervisor("groq")   # or "ollama", or graph.build_graph("ollama")
 
 def chat(query, session_id):
     history = sqlite.load_messages(session_id)
-    result = graph.invoke({"messages": history + [HumanMessage(content=query)]})
+    # Stop supervisor/worker hand-offs if a model keeps routing without
+    # producing a final answer.
+    result = graph.invoke(
+        {"messages": history + [HumanMessage(content=query)]},
+        config={"recursion_limit": 12},
+    )
     new_messages = result["messages"][len(history):]
     sqlite.append_messages(session_id, new_messages)
     # The supervisor often adds a closing line after the worker's answer.
@@ -31,12 +36,30 @@ def is_answer(m):
 def get_history(session_id = None):
     # Only show user questions and final AI answers, not tool steps
     shown = []
-    for m in sqlite.load_messages(session_id):
+    messages = (sqlite.load_messages(session_id) if session_id is not None
+                else [message for _, message in sqlite.load_all_messages()])
+    for m in messages:
         if m.type != "human" and not is_answer(m):
             continue
         item = {"role": "user" if m.type == "human" else "ai", "content": m.content.strip()}
         if item != (shown[-1] if shown else None):   # supervisor repeats the worker's answer
             shown.append(item)
     return shown
+
+
+def get_all_history():
+    """Return visible conversation history grouped by session ID."""
+    grouped = {}
+    for session_id, message in sqlite.load_all_messages():
+        if message.type != "human" and not is_answer(message):
+            continue
+        item = {"role": "user" if message.type == "human" else "ai",
+                "content": message.content.strip()}
+        messages = grouped.setdefault(session_id, [])
+        if item != (messages[-1] if messages else None):
+            messages.append(item)
+    return [{"session_id": session_id, "messages": messages}
+            for session_id, messages in grouped.items()]
+
 
 

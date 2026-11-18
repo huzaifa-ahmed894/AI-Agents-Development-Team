@@ -28,7 +28,9 @@ LLMS = {
 
 
 def create_chat_model(llm="ollama"):
-    return ChatOpenAI(**LLMS[llm], temperature=0)
+    # Bound provider waits so a stalled API/Ollama process cannot hold a chat
+    # request open indefinitely. Retries are kept low to preserve that bound.
+    return ChatOpenAI(**LLMS[llm], temperature=0, timeout=45, max_retries=1)
 
 
 def build_graph(llm="ollama", model=None, tools=None):
