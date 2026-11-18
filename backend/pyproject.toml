@@ -12,3 +12,6 @@ dependencies = [
     "langgraph>=1.2.20",
     "langgraph-supervisor>=0.0.31",
 ]
+
+[tool.fastapi]
+ entrypoint = "main:app"
