@@ -119,8 +119,11 @@ code, kbd, pre { font-family: var(--mono); }
 .team-status li { display: flex; align-items: center; gap: 9px; padding: 9px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel); font-size: 13px; }
 .team-status svg { color: var(--muted); }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
-.team-status li:nth-child(2) .pulse { animation-delay: .25s; }
-.team-status li:nth-child(3) .pulse { animation-delay: .5s; }
+.team-status li.start { border-color: var(--accent); }
+.team-status li.idle { color: var(--muted); }
+.team-status li.idle .pulse { animation: none; opacity: .25; }
+.activity { padding-left: 20px; font-size: 13px; line-height: 1.9; color: var(--muted); }
+.activity li:last-child { color: var(--ink); }
 @keyframes pulse { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
 .elapsed { display: inline-block; margin-left: 10px; padding: 1px 8px; border-radius: 5px; background: var(--hover); color: var(--ink); font: 500 12px var(--mono); }
 

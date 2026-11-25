@@ -50,8 +50,10 @@ def build_team(model=None):
    developer = create_agent(
        model, [list_files, read_file, write_file], name="developer",
        system_prompt=("You are a Python developer. Implement the plan by saving complete files "
-                      "with write_file. If the reviewer gave feedback, fix every point. "
-                      "Reply with the files you changed. Never claim you ran the code."),
+                       "with write_file. Keep each file small (split large modules) and make "
+                       "one write_file call per file, one at a time. "
+                       "If the reviewer gave feedback, fix every point. "
+                       "Reply with the files you changed. Never claim you ran the code."),
    )
    reviewer = create_agent(
        model, [list_files, read_file], name="reviewer",
