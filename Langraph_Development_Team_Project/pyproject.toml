@@ -12,6 +12,7 @@ dependencies = [
     "langchain>=1.5.2",
     "langchain-core",
     "langchain-openai",
+    "langfuse>=5.2.0",
     "langgraph>=1.2.23",
     "langgraph-supervisor>=0.0.31",
     "psycopg[binary]>=3.3.9",
