@@ -35,9 +35,13 @@ def create_chat_model(llm="groq"):
 
 
 
-def build_team(model=None):
+def build_team(model=None, docs_tools=()):
    model = model or create_chat_model()
-   planner_tools = [list_files, read_file] + ([web_search] if os.getenv("TAVILY_API_KEY") else [])
+   planner_tools = [list_files, read_file, *docs_tools] + ([web_search] if os.getenv("TAVILY_API_KEY") else [])
+
+   docs_names = ", ".join(t.name for t in docs_tools)
+   docs_hint = (f" Your Context7 documentation tools are: {docs_names}. "
+                 "Use them for library docs.") if docs_tools else ""
 
 
    planner = create_agent(
@@ -45,15 +49,15 @@ def build_team(model=None):
        system_prompt=("You are a Python planner. Read the request and any existing files. "
                       "Reply with short requirements, implementation steps and numbered "
                       "acceptance criteria. If you search the web, list source URLs. "
-                      "Do not write code."),
+                      "Do not write code." + docs_hint),
    )
    developer = create_agent(
-       model, [list_files, read_file, write_file], name="developer",
+       model, [list_files, read_file, write_file, *docs_tools], name="developer",
        system_prompt=("You are a Python developer. Implement the plan by saving complete files "
                        "with write_file. Keep each file small (split large modules) and make "
                        "one write_file call per file, one at a time. "
                        "If the reviewer gave feedback, fix every point. "
-                       "Reply with the files you changed. Never claim you ran the code."),
+                       "Reply with the files you changed. Never claim you ran the code." + docs_hint),
    )
    reviewer = create_agent(
        model, [list_files, read_file], name="reviewer",
@@ -76,6 +80,10 @@ def build_team(model=None):
            f"5. Stop when APPROVED, or after {MAX_DEVELOPER_PASSES} developer passes.\n"
            "A revision request starts from the previous run's files: skip the planner if the change is small.\n"
            "Finish with a short summary: approved or draft, files changed, open feedback."
+           + (f"\nThe planner and developer have these Context7 documentation tools: {docs_names}. "
+               "If asked which tools exist, list them yourself. Send library documentation "
+               "questions to the planner and pass on its answer; no developer or reviewer "
+               "is needed for those." if docs_tools else "")
        ),
    ).compile()
 

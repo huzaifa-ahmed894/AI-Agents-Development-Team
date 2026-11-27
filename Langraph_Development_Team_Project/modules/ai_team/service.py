@@ -11,14 +11,23 @@ from core.database.postgres import Run, engine
 from modules.ai_team.graph import build_team
 from langfuse.langchain import CallbackHandler
 
+from core.mcp import load_mcp_tools
+
 _team = None
 log = logging.getLogger(__name__)
 
 
-def get_team():
+async def get_team():
     global _team  # built on the first request, so the server can start without a model key
     if _team is None:
-        _team = build_team()
+
+        try:
+            docs_tools = await load_mcp_tools()
+        except Exception:
+            log.warning("\n*** Unable to load tools... *** \n")
+            docs_tools = []
+
+        _team = build_team(docs_tools=docs_tools)
     return _team
 
 
@@ -71,7 +80,7 @@ def prepare(message, parent_id=None):
             messages = [("user", parent.message), ("assistant", parent.answer)]
 
     messages.append(("user", message))
-    config = {"configurable": {"files": files}, "recursion_limit": 60, "callbacks": [CallbackHandler()], "run-name": "ai-development-team-agent"}
+    config = {"configurable": {"files": files}, "recursion_limit": 60, "callbacks": [CallbackHandler()], "run_name": "ai-development-team-agent"}
     return messages, files, config
 
 
@@ -90,11 +99,10 @@ def save(message, parent_id, files, result):
         return to_response(run)
 
 
-def chat(message, parent_id=None):
+async def chat(message, parent_id=None):
     messages, files, config = prepare(message, parent_id)
-    result = get_team().invoke(
-        {"messages": messages}, config
-    )  # no session open during the slow AI call
+    team = await get_team()
+    result = await team.ainvoke({"messages": messages}, config)
     return save(message, parent_id, files, result)
 
 
@@ -134,28 +142,22 @@ def chat_stream(message, parent_id=None):
     # runs before the response starts, so a missing parent is still a real 404
     messages, files, config = prepare(message, parent_id)
 
-    def events():
+    async def events():
         try:
             result = None
-            for ns, mode, data in get_team().stream(
-                {"messages": messages},
-                config,
-                stream_mode=["tasks", "values"],
-                subgraphs=True,
-            ):
+            team = await get_team()
+            async for ns, mode, data in team.astream(   # MCP tools are async-only
+                    {"messages": messages}, config,
+                    stream_mode=["tasks", "values"], subgraphs=True):
                 if mode == "tasks":
-                    yield from progress(ns, data)
+                    for event in progress(ns, data):   # no "yield from" in async functions
+                        yield event
                 elif not ns:
-                    result = data  # final top-level state
+                    result = data   # final top-level state
             yield {"type": "done", "run": save(message, parent_id, files, result)}
-        except (
-            Exception
-        ):  # the 200 status is already sent, so report failure as an event
+        except Exception:   # the 200 status is already sent, so report failure as an event
             log.exception("Streaming run failed")
-            yield {
-                "type": "error",
-                "error": "The team couldn\u2019t finish this run. Check the FastAPI logs.",
-            }
+            yield {"type": "error", "error": "The team couldn\u2019t finish this run. Check the FastAPI logs."}
 
     return events()
 
