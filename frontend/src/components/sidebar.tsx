@@ -11,7 +11,7 @@ export function Sidebar({ projects, activeId, ready, storageError, select, newPr
   return <>
     <div className="sidebar-brand">
       <button className="wordmark" onClick={newProject} aria-label="AI Development Team, new project">
-        <span className="wordmark-mark" aria-hidden>{"</>"}</span><span>dev<b>team</b></span>
+        <span className="wordmark-mark" aria-hidden><span>AI</span><i /></span><span>dev<b>team</b></span>
       </button>
       <button className="icon-button sidebar-close" onClick={close} aria-label="Close sidebar"><PanelLeftClose size={18} /></button>
     </div>
@@ -35,7 +35,8 @@ export function Sidebar({ projects, activeId, ready, storageError, select, newPr
                   onClick={() => select(v.id)} title={v.title}>
                   <span className={`dot ${v.approved ? "ok" : "draft"}`} aria-hidden />
                   <span className="version-number">v{i + 1}</span>
-                  <span className="version-title">{v.title}</span>
+                  <span className="version-title">{i === 0 && v.title === project.title ? "Initial version" : v.title}</span>
+                  <time className="version-date" dateTime={v.createdAt}>{new Date(v.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time>
                   <span className="sr-only">{v.approved ? "approved" : "draft"}</span>
                 </button>
               </li>)}

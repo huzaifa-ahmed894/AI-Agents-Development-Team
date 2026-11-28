@@ -26,7 +26,10 @@ function saveFile(path: string, content: string) {
 }
 
 export function FileViewer({ files }: { files: Record<string, string> }) {
-  const paths = useMemo(() => Object.keys(files).sort(), [files]);
+  const paths = useMemo(() => Object.keys(files).sort((a, b) => {
+    const rank = (path: string) => /(^|\/)(readme|license)(\.|$)/i.test(path) ? 2 : /(^|\/)(index|main|app|src\/main)\.[a-z0-9]+$/i.test(path) ? 0 : 1;
+    return rank(a) - rank(b) || a.localeCompare(b);
+  }), [files]);
   const [picked, setPicked] = useState<string | null>(null);
   const path = picked && picked in files ? picked : paths[0];
 
